@@ -1,13 +1,12 @@
-from funding_arbitrage import Funding_Arbitrage, Pair,Exchange
+from fundingRateData import Funding_Rates, Exchange_pair
+
+# Kucoin should be last as we need to take data one coin at a time. Should filter by existing pairs in pairs list.
+cex_list = ['kucoin']
 
 
-
-cex_list = ['bybit']
-
-
-FA = Funding_Arbitrage()
-FA.get_pair_data_from_cex(cex_list)
+FRD = Funding_Rates()
+FRD.get_pair_data_from_cex(cex_list)
 
 
-for pair in FA.pairs.values():
-    print(f'{pair.lowest.name} -- {pair.lowest.funding_rate} ')
+for ep in FRD.exchange_pairs.values():
+    print(f'{ep.name} -- {ep.symbol} -- {ep.funding_rate} -- {ep.volume} -- {ep.next_funding_unix}')
