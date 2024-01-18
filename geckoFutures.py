@@ -1,15 +1,17 @@
 import requests
 import time
-
+from logToDb import DBlogger
 
 class Gecko:
     url_futures = 'https://api.coingecko.com/api/v3/derivatives/exchanges/'
     url_exchanges = 'https://api.coingecko.com/api/v3/derivatives/exchanges/?include_tickers=all'
 
-    def __init__(self):
+    def __init__(self, logger: DBlogger):
         self.exchanges = {}             # Key: Exchange name, Value: futures_id
         self.exchange_pairs = {}        # Key: Exchange_id + symbol, Value: exchange_pair obj
         self.successful_fetch: bool
+
+        self.logger = logger
 
     def get_exchanges(self, top: int = 20):
         response = requests.get(self.url_exchanges)
@@ -28,9 +30,14 @@ class Gecko:
                 futures_id = exchange_data['id']
                 self.exchanges[name] = futures_id
 
-            else:
-                print(f"Could not access the API point for Exchanges, sucks!")
-                return
+            self.logger.add('Data upload', 'Get Exchanges list from Gecko API', 'Success',
+                            f'{len(self.exchanges)} fetched with limit set to {top}')
+
+        else:
+            print(f"Could not access the API point for Exchanges, sucks!")
+            self.logger.add('Data upload', 'Get Exchanges list from Gecko API', 'Error',
+            'Could not access the API point')
+            self.logger.exit_code_run_due_to_error('Could not access the Gecko API point for Exchanges')
 
     def get_futures_data(self):
         # We exclude anything with multiplier (like 1000PEPE)
@@ -49,21 +56,30 @@ class Gecko:
 
                 tickers = data['tickers']
 
-                for ticker in tickers:
-                    if ticker['base'][:2] != '10' and ticker['funding_rate'] != 0 and 'USD' in ticker['target']\
-                            and abs(ticker['funding_rate']) < 10 and ticker['contract_type'] == 'perpetual':
+                try:
+                    for ticker in tickers:
+                        if ticker['base'][:2] != '10' and ticker['funding_rate'] != 0 and 'USD' in ticker['target']\
+                                and abs(ticker['funding_rate']) < 10 and ticker['contract_type'] == 'perpetual':
 
-                        exchange_pair = Exchange_pair(exchange_id,ticker)
-                        self.exchange_pairs[f'{exchange_id}_{ticker["symbol"]}'] = exchange_pair
+                            exchange_pair = Exchange_pair(exchange_id,ticker)
+                            self.exchange_pairs[f'{exchange_id}_{ticker["symbol"]}'] = exchange_pair
 
-                if len(self.exchanges) > 3:
-                    time.sleep(20)
+                            self.logger.counter +=1
 
-                print(f"Fetched data for {exchange_id}")
+                    if len(self.exchanges) > 3:
+                        time.sleep(20)
+
+                    self.logger.add('Data upload', f'Fetching data for {exchange_id}', 'Success',
+                                    f'{self.logger.counter} pairs')
+                    self.logger.counter = 0 # Reset
+                except:
+                    self.logger.add('Data upload', f'Fetching data for {exchange_id}', 'Error',
+                                    f'Could not process the data')
 
             else:
-                print(f"Could not access the API point for {exchange_id}, sucks!")
-                return
+                self.logger.add('Data upload', f'Fetching data for {exchange_id}', 'Error',
+                                f'Could not access API point')
+                return  # Not fatal error, just missing some data
 
 
 class Exchange_pair:
