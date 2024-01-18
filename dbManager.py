@@ -2,20 +2,20 @@ from datetime import datetime,time,date,timezone
 import psycopg2
 from keys import Postgres_keys
 
-
 # Somehow ENSURE that the connection is always closed. Otherwise there can be data leakage and
 
 
 class Connection:
 
 
-    def __init__(self):
+    def __init__(self, remote_server: bool = False):
 
-        self.conn = psycopg2.connect(host='67.211.45.183', dbname='Funding_Rate_Data', user=Postgres_keys.userName,
-                            password=Postgres_keys.pw, port=5433)
-
-        #self.conn = psycopg2.connect(host='localhost', dbname='Funding_Rate_Data', user=Postgres_keys.userName,
-        #                    password=Postgres_keys.pw, port=5432)
+        if remote_server:
+            self.conn = psycopg2.connect(host='67.211.45.183', dbname='Funding_Rate_Data', user=Postgres_keys.userName,
+                                password=Postgres_keys.pw, port=5433)
+        else:
+            self.conn = psycopg2.connect(host='localhost', dbname='Funding_Rate_Data', user=Postgres_keys.userName,
+                                password=Postgres_keys.pw, port=5432)
 
 
         self.cur = self.conn.cursor()
@@ -45,7 +45,8 @@ class Connection:
 
     def insert_to_table(self, table_name: str, columns: list, data: list):
 
-        columns.remove('id')        # We don't need the ID col
+        if 'id' in columns:
+            columns.remove('id')        # We don't need the ID col
 
         columns_str = ''
         values_str = ''
@@ -191,7 +192,7 @@ class Connection:
         self.cur.execute(query)
         self.conn.commit()
 
-        print(f'Deleted entry {table_name} -- {action} -- {date}')
+        #print(f'Deleted entry {table_name} -- {action} -- {date}')
 
     def delete_day_from_table(self, table_name: str, dateCol: str = 'date', date = datetime.now(timezone.utc).date()):
         query = f"""
@@ -201,7 +202,7 @@ class Connection:
         self.cur.execute(query)
         self.conn.commit()
 
-        print(f'Deleted entries from table {table_name} for date {date}')
+        #print(f'Deleted entries from table {table_name} for date {date}')
 
     def delete_date_time_from_table(self, table_name: str, dateCol: str = 'date', timeCol: str = 'time',params: tuple = ()):
         query = f"""
@@ -308,3 +309,4 @@ class Connection:
         results = self.cur.fetchall()
 
         return results
+
