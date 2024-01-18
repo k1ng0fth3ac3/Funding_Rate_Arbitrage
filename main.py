@@ -1,7 +1,14 @@
 from dbUpload import Upload
+from logToDb import DBlogger
+
+remote_server = False
+terminal_print = True
+exchange_count = 3
 
 
+logger = DBlogger(remote_server=remote_server,terminal_print=terminal_print)
 
-upload = Upload()
-upload.funding_rates()
+
+upload = Upload(logger=logger,remote_server=remote_server)
+upload.funding_rates(exchange_count=exchange_count)
 

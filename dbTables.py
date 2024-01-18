@@ -25,6 +25,15 @@ class Create_table:
         self.connection.create_table(table_name,dicCols)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
+    def action_log_detailed(self):
+        table_name = 'action_log_detailed'
+
+        dicCols = self.table_info.action_log_detailed()
+
+        self.connection.create_table(table_name,dicCols)
+        self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
+
+
     def exchange_info(self):
         table_name = 'exchange_info'
 
@@ -38,6 +47,7 @@ class Create_table:
         table_name = 'funding_rates'
 
         dicCols = self.table_info.funding_rates()
+        print(dicCols)
 
         self.connection.create_table(table_name,dicCols)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
@@ -58,6 +68,20 @@ class Tables_info:
         dicCols['note'] = 'VARCHAR(255)'
 
         return dicCols
+
+    def action_log_detailed(self):
+        # Detailed log which is updated on each individual event
+        dicCols = {}
+        dicCols['id'] = 'SERIAL PRIMARY KEY'
+        dicCols['utc_date'] = 'DATE'
+        dicCols['utc_time'] = 'TIME'
+        dicCols['action'] = 'VARCHAR(100)'              # Data upload, etc.
+        dicCols['sub_action'] = 'VARCHAR(100)'          # Initialization, upload of x, fetching from api, etc.
+        dicCols['type'] = 'VARCHAR(20)'                 # Success / Warning / Error
+        dicCols['details'] = 'VARCHAR(255)'             # Any details
+
+        return dicCols
+
 
     def update_log(self):
         # For each run and individual exchange we have 1 row of data
