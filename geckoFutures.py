@@ -72,9 +72,10 @@ class Gecko:
                     self.logger.add('Data upload', f'Fetching data for {exchange_id}', 'Success',
                                     f'{self.logger.counter} pairs')
                     self.logger.counter = 0 # Reset
-                except:
+                except Exception as e:
+                    error_message = str(e)[-255:]
                     self.logger.add('Data upload', f'Fetching data for {exchange_id}', 'Error',
-                                    f'Could not process the data')
+                                    f'{error_message}')
 
             else:
                 self.logger.add('Data upload', f'Fetching data for {exchange_id}', 'Error',

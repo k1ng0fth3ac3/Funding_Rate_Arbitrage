@@ -29,12 +29,12 @@ class Upload:
             self.logger.add('Data upload', 'Establishing connection to database', 'Success', 'Connected')
         except PsycopgError as e:
             # Specific database-related error
-            error_message = str(e)
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
         except Exception as e:
             # Other unexpected exceptions
-            error_message = str(e)
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
 
@@ -65,9 +65,10 @@ class Upload:
 
 
             self.logger.add('Data upload', 'Calculating funding Cycle', 'Success', 'Calculated')
-        except:
-            self.logger.add('Data upload', 'Calculating funding Cycle', 'Success', 'Calculated')
-            self.logger.exit_code_run_due_to_error('Calculating funding Cycle')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Calculating funding Cycle', 'Error', f'{error_message}')
+            self.logger.exit_code_run_due_to_error(f'{error_message}')
 
 
         # ----- In case we have data for the same funding cycle, delete the previous data and re-upload
@@ -75,9 +76,10 @@ class Upload:
             if lastUpdDate is not None and fundingCycle == lastFundingCycle and lastUpdDate == dateNow:
                 connection.delete_date_time_from_table(table_name=table_name,dateCol='utc_date',timeCol='utc_time',params=(lastUpdDate,lastUpdTime))
                 self.logger.add('Data upload', 'Delete previous data for the day and Cycle', 'Success', 'Deleted')
-        except:
-            self.logger.add('Data upload', 'Delete previous data for the day and Cycle', 'Error', 'Could not Delete')
-            self.logger.exit_code_run_due_to_error('Could not delete the previous data for the cycle')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Delete previous data for the day and Cycle', 'Error', f'{error_message}')
+            self.logger.exit_code_run_due_to_error(f'{error_message}')
         # -----/
 
         # ----- Get column Names
@@ -138,9 +140,10 @@ class Upload:
 
             self.logger.add('Data upload', f'Object Funding Rate Data processing into rows', 'Success',
                             f'All data converted into rows')
-        except:
+        except Exception as e:
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Object Funding Rate Data processing into rows', 'Error',
-                            f'Something went sideways')
+                            f'{error_message}')
 
         try:
             connection.insert_to_table(table_name,fr_columns,data)
@@ -149,12 +152,12 @@ class Upload:
                             f'{len(data)} rows uploaded')
         except PsycopgError as e:
             # Specific database-related error
-            error_message = str(e)
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Upload data to {table_name} table', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
         except Exception as e:
             # Other unexpected exceptions
-            error_message = str(e)
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Upload data to {table_name} table', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
 
@@ -184,9 +187,9 @@ class Upload:
             self.logger.add('Data upload', f'Object Log Data processing into rows', 'Success',
                             f'All data converted into rows')
         except:
-
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Object Log Data processing into rows', 'Error',
-                            f'Something went wrong')
+                            f'{error_message}')
         # -----/
 
         # ----- Upload Update log datA
@@ -196,12 +199,12 @@ class Upload:
                         f'{len(data)} rows uploaded')
         except PsycopgError as e:
             # Specific database-related error
-            error_message = str(e)
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Upload data to update:log table', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
         except Exception as e:
             # Other unexpected exceptions
-            error_message = str(e)
+            error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Upload data to update_log table', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
 
