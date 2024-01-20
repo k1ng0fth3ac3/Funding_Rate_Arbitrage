@@ -47,9 +47,9 @@ class Upload:
             timeNow = datetime.now(timezone.utc).time().strftime("%H:%M:%S")
             if datetime.now(timezone.utc).time() >= time(20, 0) and datetime.now(timezone.utc).time() < time(4, 0):
                 fundingCycle = 1
-            elif datetime.now(timezone.utc).time() >= time(4, 0) and datetime.now(timezone.utc).time() < time(8, 0):
+            elif datetime.now(timezone.utc).time() >= time(4, 0) and datetime.now(timezone.utc).time() < time(12, 0):
                 fundingCycle = 2
-            elif datetime.now(timezone.utc).time() >= time(8, 0) and datetime.now(timezone.utc).time() < time(20, 0):
+            elif datetime.now(timezone.utc).time() >= time(12, 0) and datetime.now(timezone.utc).time() < time(20, 0):
                 fundingCycle = 3
 
             lastUpdDate = dicTableInfo['upload_last_date']
@@ -57,9 +57,9 @@ class Upload:
             if lastUpdDate is not None:
                 if lastUpdTime >= time(20, 0) and lastUpdTime < time(4, 0):
                     lastFundingCycle = 1
-                elif lastUpdTime >= time(4, 0) and lastUpdTime < time(8, 0):
+                elif lastUpdTime >= time(4, 0) and lastUpdTime < time(12, 0):
                     lastFundingCycle = 2
-                elif lastUpdTime >= time(8, 0) and lastUpdTime < time(20, 0):
+                elif lastUpdTime >= time(12, 0) and lastUpdTime < time(20, 0):
                     lastFundingCycle = 3
             # -----/
 
@@ -77,6 +77,7 @@ class Upload:
                 self.logger.add('Data upload', 'Delete previous data for the day and Cycle', 'Success', 'Deleted')
         except:
             self.logger.add('Data upload', 'Delete previous data for the day and Cycle', 'Error', 'Could not Delete')
+            self.logger.exit_code_run_due_to_error('Could not delete the previous data for the cycle')
         # -----/
 
         # ----- Get column Names
