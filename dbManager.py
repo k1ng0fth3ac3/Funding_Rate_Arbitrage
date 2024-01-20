@@ -15,7 +15,7 @@ class Connection:
                                 password=Postgres_keys.pw, port=5433)
         else:
             self.conn = psycopg2.connect(host='localhost', dbname='Funding_Rate_Data', user=Postgres_keys.userName,
-                                password=Postgres_keys.pw, port=5432)
+                                password=Postgres_keys.pw, port=Postgres_keys.port)
 
 
         self.cur = self.conn.cursor()
@@ -181,7 +181,7 @@ class Connection:
         self.cur.execute(query)
         self.conn.commit()
 
-        print(f'Added to log: {table_name} -- {action} -- {date} -- {rows}')
+        #print(f'Added to log: {table_name} -- {action} -- {date} -- {rows}')
 
     def delete_log_entry(self, table_name: str, action: str, date = datetime.now(timezone.utc).date()):
         query = f"""
@@ -212,7 +212,7 @@ class Connection:
         self.cur.execute(query,params)
         self.conn.commit()
 
-        print(f'Deleted entries from table {table_name} for datetime {params}')
+        #print(f'Deleted entries from table {table_name} for datetime {params}')
 
 
     def delete_older_than_x_days_from_table(self,table_name: str, dateCol: str = 'date', params: tuple = ()):
@@ -224,7 +224,7 @@ class Connection:
         self.cur.execute(query,params)
         self.conn.commit()
 
-        print(f'Deleted entries from table {table_name}')
+        #print(f'Deleted entries from table {table_name}')
 
 
     def clear_whole_table(self, table_name: str):
@@ -234,7 +234,7 @@ class Connection:
         self.cur.execute(query)
         self.conn.commit()
 
-        print(f'Cleared table {table_name}')
+        #print(f'Cleared table {table_name}')
 
 
     def get_uniq_values_from_col(self, table_name: str, col_name: str, col_2_name: str = None):
