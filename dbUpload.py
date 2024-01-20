@@ -45,21 +45,21 @@ class Upload:
         try:
             dateNow = datetime.now(timezone.utc).date()
             timeNow = datetime.now(timezone.utc).time().strftime("%H:%M:%S")
-            if datetime.now(timezone.utc).time() >= time(20, 0) and datetime.now(timezone.utc).time() < time(4, 0):
+            if datetime.now(timezone.utc).time() >= time(20, 0) or datetime.now(timezone.utc).time() < time(4, 0):
                 fundingCycle = 1
-            elif datetime.now(timezone.utc).time() >= time(4, 0) and datetime.now(timezone.utc).time() < time(12, 0):
+            elif datetime.now(timezone.utc).time() < time(12, 0):
                 fundingCycle = 2
-            elif datetime.now(timezone.utc).time() >= time(12, 0) and datetime.now(timezone.utc).time() < time(20, 0):
+            elif datetime.now(timezone.utc).time() < time(20, 0):
                 fundingCycle = 3
 
             lastUpdDate = dicTableInfo['upload_last_date']
             lastUpdTime = dicTableInfo['upload_last_time']
             if lastUpdDate is not None:
-                if lastUpdTime >= time(20, 0) and lastUpdTime < time(4, 0):
+                if lastUpdTime >= time(20, 0) or lastUpdTime < time(4, 0):
                     lastFundingCycle = 1
-                elif lastUpdTime >= time(4, 0) and lastUpdTime < time(12, 0):
+                elif lastUpdTime < time(12, 0):
                     lastFundingCycle = 2
-                elif lastUpdTime >= time(12, 0) and lastUpdTime < time(20, 0):
+                elif lastUpdTime < time(20, 0):
                     lastFundingCycle = 3
             # -----/
 
