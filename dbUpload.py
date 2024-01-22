@@ -63,7 +63,6 @@ class Upload:
                     lastFundingCycle = 3
             # -----/
 
-
             self.logger.add('Data upload', 'Calculating funding Cycle', 'Success', 'Calculated')
         except Exception as e:
             error_message = str(e)[-255:]
