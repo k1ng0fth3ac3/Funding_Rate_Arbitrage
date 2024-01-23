@@ -129,3 +129,26 @@ class Tables_info:
 
         return dicCols
 
+    def calc_table(self):
+        dicCols = {}
+        dicCols['id'] = 'SERIAL PRIMARY KEY'
+        dicCols['exchange_id'] = 'VARCHAR(30)'
+        dicCols['symbol'] = 'VARCHAR(100)'
+        dicCols['base'] = 'VARCHAR(20)'
+        dicCols['target'] = 'VARCHAR(10)'
+        dicCols['cycle_count'] = 'INT'
+        dicCols['cycle_nr'] = 'INT'                     # Not really used, always 1
+        dicCols['volume'] = 'DECIMAL(16,0)'
+        dicCols['spread'] = 'DECIMAL(10,9)'
+        dicCols['open_interest'] = 'DECIMAL(16,0)'
+        dicCols['funding_rate'] = 'DECIMAL(8,6)'
+        dicCols['avg_cycle_3'] = 'DECIMAL(8,6)'         # Funding rate avg from past 3 Cycles
+        dicCols['avg_cycle_6'] = 'DECIMAL(8,6)'
+        dicCols['avg_cycle_9'] = 'DECIMAL(8,6)'
+        dicCols['avg_cycle_12'] = 'DECIMAL(8,6)'
+        dicCols['avg_cycle_15'] = 'DECIMAL(8,6)'
+        dicCols['avg_cycle_18'] = 'DECIMAL(8,6)'
+        dicCols['avg_cycle_21'] = 'DECIMAL(8,6)'
+
+        return dicCols
+
