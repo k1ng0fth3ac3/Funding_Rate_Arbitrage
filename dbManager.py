@@ -291,7 +291,7 @@ class Connection:
         self.conn.commit()
 
     def select_table_data(self, table_name: str, columns: str = '*', where_clause: str = None, group_by:str = None,
-                          order_by: str = None, params: tuple = ()):
+                          order_by: str = None, limit: float = None, params: tuple = ()):
         # if we need to have joins, just write it in the table_name
         # Write %s in place of all the parameters we wish to pass and then define them in the same order in the tuple
         # If we need to use the LIKE keyword, always have parameter for it and don't hardcode it.
@@ -302,6 +302,7 @@ class Connection:
             {f'WHERE {where_clause}' if where_clause else ''}
             {f'GROUP BY {group_by}' if group_by else ''}
             {f'ORDER BY {order_by}' if order_by else ''}
+            {f'LIMIT {limit}' if limit else ''}
              ;
         """
 

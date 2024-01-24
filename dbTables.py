@@ -47,10 +47,17 @@ class Create_table:
         table_name = 'funding_rates'
 
         dicCols = self.table_info.funding_rates()
-        print(dicCols)
 
         self.connection.create_table(table_name,dicCols)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
+
+    def calc_table(self):
+        table_name = 'calc_table'
+
+        dicCols = self.table_info.calc_table()
+
+        self.connection.create_table(table_name, dicCols)
+        self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
 
 
 class Tables_info:
