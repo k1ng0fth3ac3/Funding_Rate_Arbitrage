@@ -43,6 +43,15 @@ class Create_table:
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
 
+    def funding_rates_2h(self):
+        table_name = 'funding_rates_2h'
+
+        dicCols = self.table_info.funding_rates()
+
+        self.connection.create_table(table_name,dicCols)
+        self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
+
+
     def funding_rates(self):
         table_name = 'funding_rates'
 
@@ -156,6 +165,40 @@ class Tables_info:
         dicCols['avg_cycle_15'] = 'DECIMAL(8,6)'
         dicCols['avg_cycle_18'] = 'DECIMAL(8,6)'
         dicCols['avg_cycle_21'] = 'DECIMAL(8,6)'
+
+        return dicCols
+
+    def result_table(self):
+        dicCols = {}
+        dicCols['id'] = 'SERIAL PRIMARY KEY'
+        dicCols['base'] = 'VARCHAR(20)'
+        dicCols['exchange_id_1'] = 'VARCHAR(30)'
+        dicCols['funding_rate_1'] = 'DECIMAL(8,6)'
+        dicCols['exchange_id_2'] = 'VARCHAR(30)'
+        dicCols['funding_rate_2'] = 'DECIMAL(8,6)'
+
+        dicCols['delta'] = 'DECIMAL(8,6)'
+        dicCols['apr'] = 'DECIMAL(10,3)'
+
+        dicCols['target_1'] = 'VARCHAR(10)'
+        dicCols['target_2'] = 'VARCHAR(10)'
+
+        dicCols['volume_1'] = 'DECIMAL(16,0)'
+        dicCols['volume_2'] = 'DECIMAL(16,0)'
+
+        dicCols['spread_1'] = 'DECIMAL(10,9)'
+        dicCols['spread_2'] = 'DECIMAL(10,9)'
+
+        dicCols['open_interest_1'] = 'DECIMAL(16,0)'
+        dicCols['open_interest_2'] = 'DECIMAL(16,0)'
+
+        dicCols['avg_delta_3'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_6'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_9'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_12'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_15'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_18'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_21'] = 'DECIMAL(8,6)'
 
         return dicCols
 
