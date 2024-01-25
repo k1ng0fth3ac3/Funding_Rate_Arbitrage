@@ -22,7 +22,7 @@ class Upload:
 
         # ---------------------------------------- SETUP
         # ----- Connect to Database and Get Table info
-        table_name = 'funding_rates'
+        table_name = 'funding_rates_2h'
 
         try:
             connection = Connection(remote_server=self.remote_server)
@@ -45,22 +45,12 @@ class Upload:
         try:
             dateNow = datetime.now(timezone.utc).date()
             timeNow = datetime.now(timezone.utc).time().strftime("%H:%M:%S")
-            if datetime.now(timezone.utc).time() >= time(20, 0) or datetime.now(timezone.utc).time() < time(4, 0):
-                fundingCycle = 1
-            elif datetime.now(timezone.utc).time() < time(12, 0):
-                fundingCycle = 2
-            elif datetime.now(timezone.utc).time() < time(20, 0):
-                fundingCycle = 3
+            fundingCycle = self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True)
 
             lastUpdDate = dicTableInfo['upload_last_date']
             lastUpdTime = dicTableInfo['upload_last_time']
             if lastUpdDate is not None:
-                if lastUpdTime >= time(20, 0) or lastUpdTime < time(4, 0):
-                    lastFundingCycle = 1
-                elif lastUpdTime < time(12, 0):
-                    lastFundingCycle = 2
-                elif lastUpdTime < time(20, 0):
-                    lastFundingCycle = 3
+                lastFundingCycle = self.get_funding_cycle(refTime=lastUpdTime, is2hourCycle=True)
             # -----/
 
             self.logger.add('Data upload', 'Calculating funding Cycle', 'Success', 'Calculated')
@@ -214,6 +204,17 @@ class Upload:
         # ----------------------------------------/
 
 
+    def get_funding_cycle(self, refTime, is2hourCycle: bool = True):
+
+        # 2-hour Cycle: 1 = 20:00-22:00, 2 = 22:00-24:00, 3 = 00:00-02:00, 02:00-04:00, etc. etc.
+        # 8-hour Cycle: 1 = 20:00-04:00, 2 = 04:00-12:00, 3 = 12:00-20:00
+
+        if is2hourCycle:    # 2 Hour cycle
+            fundingCycle = ((refTime.hour - 20) % 24) // 2 + 1
+        else:               # 8 Hour cycle
+            fundingCycle = ((refTime.hour - 20) % 24) // 8 + 1
+
+        return fundingCyle
 
     def calc_table(self):
         table_name = 'calc_table'
@@ -315,8 +316,11 @@ class Upload:
                                                 columns=columns,where_clause=where_clause, order_by=order_by,
                                                 params=(1,))
 
+            dicInfo = connection.get_table_info(table_name)
+            rowC = dicInfo['total_rows']
+
             self.logger.add('Data upload', f'Uploading data calculations', 'Success',
-                            f'Calculated and added to calc_table')
+                            f'{rowC} added to the table')
 
         except Exception as e:
             error_message = str(e)[-255:]
