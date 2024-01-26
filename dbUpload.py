@@ -16,7 +16,7 @@ class Upload:
 
         self.logger = logger
 
-    def funding_rates(self, exchange_count: int = 40):
+    def funding_rates(self, exchange_count: int = 40, min_fr: float = 0.015, min_vol: float = 15000, min_oi: float = 15000):
 
         self.logger.add('Data upload', 'Initialize', 'Success', 'Created Tables_info and gecko objects')
 
@@ -85,12 +85,28 @@ class Upload:
                         f'Ready to upload the data to DB')
         # ----------------------------------------/
 
+        # Get active pairs
+        dicActivePairs = connection.get_uniq_values_from_col('active_pairs','exchange_id_symbol')
+        dicToActivePairs = {}   # New pairs to be added
+
 
         # ---------------------------------------- FUNDING RATE DATA
         try:
             dicExchanges = {}           # Key: exchange_id, Value: dic with currency- and pairs counts
             data = []
             for ep in self.gecko.exchange_pairs.values():
+
+                # ----- Either our FR + Vol meets criteria this Cycle, or it met criteria in the past (is in active_pairs)
+                exchange_symbol = f'{ep.exchange_id}_{ep.symbol}'
+                criteriaPass = False
+                if abs(ep.funding_rate) >= min_fr and ep.volume_usd >= min_vol and ep.open_interest >= min_oi:
+                    criteriaPass = True
+                    if not exchange_symbol in dicActivePairs:
+                        dicToActivePairs[exchange_symbol] = ep
+                else:
+                    if exchange_symbol in dicActivePairs:
+                        criteriaPass = True
+                # -----/
 
 
                 # ----- Update log data (for each exchange)
@@ -155,6 +171,45 @@ class Upload:
 
         # ----------------------------------------/
 
+        # ---------------------------------------- ACTIVE PAIRS
+        try:
+            data = []  # Reset
+            for ex_pair, ep in dicToActivePairs.items():
+                data_row = ()
+                data_row = (f'{dateNow}',
+                            f'{ep.exchange_id}',
+                            f'{ep.base}',
+                            f'{ex_pair}'
+                            )
+                data.append(data_row)
+
+            self.logger.add('Data upload', f'Active pairs data processing into rows', 'Success',
+                            f'All data converted into rows')
+
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Active pairs data processing into rows', 'Error',
+                            f'{error_message}')
+
+        # ----- Upload data to active_pairs
+        try:
+            ap_columns = list(self.tables_info.active_pairs().keys())
+            connection.insert_to_table('active_pairs', ap_columns, data)
+            self.logger.add('Data upload', f'Upload data to active_pairs table', 'Success',
+                            f'{len(data)} rows uploaded')
+        except PsycopgError as e:
+            # Specific database-related error
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to active_pairs table', 'Error', error_message)
+        except Exception as e:
+            # Other unexpected exceptions
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to active_pairs table', 'Error', error_message)
+        # -----/
+
+
+        # ----------------------------------------/
+
         # ---------------------------------------- UPDATE LOG
         # ----- Update_log data
         try:
@@ -175,7 +230,7 @@ class Upload:
 
             self.logger.add('Data upload', f'Object Log Data processing into rows', 'Success',
                             f'All data converted into rows')
-        except:
+        except Exception as e:
             error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Object Log Data processing into rows', 'Error',
                             f'{error_message}')
@@ -214,7 +269,7 @@ class Upload:
         else:               # 8 Hour cycle
             fundingCycle = ((refTime.hour - 20) % 24) // 8 + 1
 
-        return fundingCyle
+        return fundingCycle
 
     def calc_table(self):
         table_name = 'calc_table'
