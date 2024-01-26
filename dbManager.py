@@ -25,7 +25,17 @@ class Connection:
         self.cur.close()
         self.conn.close()
 
-    def create_table(self, table_name: str, dicCols: dict):
+    def create_table(self, table_name: str, dicCols: dict, delete_existing: bool = True):
+
+        if delete_existing:
+            query = f"""
+            DROP TABLE IF EXISTS {table_name};
+            """
+
+            self.cur.execute(query)
+            self.conn.commit()
+
+
         col_def = ''
         for col, col_type in dicCols.items():
             if col_def != '':
@@ -66,24 +76,28 @@ class Connection:
         self.conn.commit()
 
 
-    def update_records(self, table_name: str, columns: list, values: list, where_clause_sql: str):
-        pass
+    def update_column_by_list_of_values(self, table_name: str, column: str, newValue: str, where_col: str, params = ()):
+        query = f"""
+                UPDATE {table_name}
+                SET {column} = %s
+                WHERE {where_col} IN ({', '.join(['%s'] * len(params))});
+                """
 
-    def delete_records(self, table_name, where_clause_sql: str):
-        pass
-
-    def truncate_table(self, table_name: str):
-        pass
+        self.cur.execute(query, (newValue,) + tuple(params))
+        self.conn.commit()
 
 
-    def select_first_row(self, table_name: str):
-        pass
+    def delete_records(self, table_name, where_clause_sql: str, params = ()):
+        query = f"""
+                DELETE FROM {table_name}
+                WHERE {where_clause_sql};
+                """
 
-    def select_last_row(self, table_name: str):
-        pass
+        self.cur.execute(query, params)
+        self.conn.commit()
 
-    def select_custom(self, sql_statement: str):
-        pass
+
+
 
     def get_table_info(self, table_name: str):
 
