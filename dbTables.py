@@ -9,71 +9,71 @@ class Create_table:
         self.action = 'Create table'
         self.table_info = Tables_info()
 
-    def action_log(self):
+    def action_log(self, delete_existing: bool = False):
         table_name = 'action_log'
 
         dicCols = self.table_info.action_log()
 
-        self.connection.create_table(table_name,dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
-    def update_log(self):
+    def update_log(self, delete_existing: bool = False):
         table_name = 'update_log'
 
         dicCols = self.table_info.update_log()
 
-        self.connection.create_table(table_name,dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
-    def action_log_detailed(self):
+    def action_log_detailed(self, delete_existing: bool = False):
         table_name = 'action_log_detailed'
 
         dicCols = self.table_info.action_log_detailed()
 
-        self.connection.create_table(table_name,dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
 
-    def active_pairs(self):
+    def active_pairs(self, delete_existing: bool = False):
         table_name = 'active_pairs'
 
         dicCols = self.table_info.active_pairs()
 
-        self.connection.create_table(table_name, dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
 
-    def exchange_info(self):
+    def exchange_info(self, delete_existing: bool = False):
         table_name = 'exchange_info'
 
         dicCols = self.table_info.exchange_info()
 
-        self.connection.create_table(table_name,dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
 
-    def funding_rates_2h(self):
+    def funding_rates_2h(self, delete_existing: bool = False):
         table_name = 'funding_rates_2h'
 
         dicCols = self.table_info.funding_rates()
 
-        self.connection.create_table(table_name,dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
 
-    def funding_rates(self):
+    def funding_rates(self, delete_existing: bool = False):
         table_name = 'funding_rates'
 
         dicCols = self.table_info.funding_rates()
 
-        self.connection.create_table(table_name,dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
-    def calc_table(self):
+    def calc_table(self, delete_existing: bool = False):
         table_name = 'calc_table'
 
         dicCols = self.table_info.calc_table()
 
-        self.connection.create_table(table_name, dicCols)
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
 
 
@@ -125,6 +125,7 @@ class Tables_info:
         dicCols = {}
         dicCols['id'] = 'SERIAL PRIMARY KEY'
         dicCols['utc_date_added'] = 'DATE'
+        dicCols['utc_last_active'] = 'DATE'                 # Last active date (delete items that are too old)
         dicCols['exchange_id'] = 'VARCHAR(30)'
         dicCols['base'] = 'VARCHAR(100)'
         dicCols['exchange_id_symbol'] = 'VARCHAR(130)'      # Exchange id + _ + symbol
