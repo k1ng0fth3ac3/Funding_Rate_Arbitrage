@@ -34,6 +34,14 @@ class Create_table:
         self.connection.add_to_action_log(table_name,self.action,0,f'{len(dicCols)} columns')
 
 
+    def active_pairs(self):
+        table_name = 'active_pairs'
+
+        dicCols = self.table_info.active_pairs()
+
+        self.connection.create_table(table_name, dicCols)
+        self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
+
     def exchange_info(self):
         table_name = 'exchange_info'
 
@@ -110,6 +118,16 @@ class Tables_info:
         dicCols['currencies'] = 'INT'                       # Individual currencies (ETH, BTC, SOL, etc.)
         dicCols['pairs'] = 'INT'                            # Individual pairs (ETH-USDT, ETH-USDC, etc.)
         dicCols['volume'] = 'DECIMAL(16,0)'                 # 24h Volume (only the pairs that pass our filters)
+
+        return dicCols
+
+    def active_pairs(self):
+        dicCols = {}
+        dicCols['id'] = 'SERIAL PRIMARY KEY'
+        dicCols['utc_date_added'] = 'DATE'
+        dicCols['exchange_id'] = 'VARCHAR(30)'
+        dicCols['base'] = 'VARCHAR(100)'
+        dicCols['exchange_id_symbol'] = 'VARCHAR(130)'      # Exchange id + _ + symbol
 
         return dicCols
 
