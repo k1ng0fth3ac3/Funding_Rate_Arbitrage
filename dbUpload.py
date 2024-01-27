@@ -4,6 +4,7 @@ from dbManager import Connection
 from geckoFutures import Gecko,Exchange_pair
 from logToDb import DBlogger
 from psycopg2 import Error as PsycopgError  # Import the specific exception type
+from analytics import Analyze
 
 
 class Upload:
@@ -29,9 +30,10 @@ class Upload:
         self.funding_rates_2h()
 
 
-        if self.get_funding_cycle(refTime=self.timeNow,is2hourCycle=True) in (4, 8, 12):
+        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True) in (4, 8, 12):
             self.convert_2h_to_8h_data()
             self.calc_table()
+            self.result_table()
 
 
     def active_pairs(self,exchange_count: int = 50, min_fr: float = 0.015, min_vol: float = 15000, min_oi: float = 15000):
@@ -515,4 +517,96 @@ class Upload:
 
         dicInfo = connection.get_table_info(table_name)
         connection.add_to_action_log(table_name,'data_calculations',dicInfo['total_rows'],'Calculated')
+        connection.close_connection()
+
+
+    def result_table(self):
+
+        # ----- Connect to Database
+        table_name = 'result_table'
+
+        try:
+            connection = Connection(remote_server=self.remote_server)
+            self.logger.add('Data upload', 'Establishing connection to database', 'Success', 'Connected')
+        except PsycopgError as e:
+            # Specific database-related error
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        except Exception as e:
+            # Other unexpected exceptions
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        # -----/
+
+
+        # ----- Analyze the data
+        try:
+            analyze = Analyze()
+            analyze.get_data()
+
+            self.logger.add('Data upload', 'Analyze data', 'Success', 'Data analyzed')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Analyze data', 'Error', error_message)
+        # -----/
+
+        # -----  Process data
+        try:
+            data = []
+            for arb in analyze.arbitrage:
+                data_row = ()
+                data_row = (arb.delta,
+                            arb.apr,
+
+                            f'{arb.coin}',
+                            f'{arb.exchange_1}',
+                            arb.exchange_1_data["funding_rate"],
+                            f'{arb.exchange_2}',
+                            arb.exchange_2_data["funding_rate"] if arb.exchange_2_data is not None else None,
+
+                            arb.exchange_1_data["target"],
+                            arb.exchange_2_data["target"] if arb.exchange_2_data is not None else None,
+                            arb.exchange_1_data["volume"],
+                            arb.exchange_2_data["volume"] if arb.exchange_2_data is not None else None,
+                            arb.exchange_1_data["spread"],
+                            arb.exchange_2_data["spread"] if arb.exchange_2_data is not None else None,
+                            arb.exchange_1_data["open_interest"],
+                            arb.exchange_2_data["open_interest"] if arb.exchange_2_data is not None else None,
+
+                            arb.delta_avg[3],
+                            arb.delta_avg[6],
+                            arb.delta_avg[9],
+                            arb.delta_avg[12],
+                            arb.delta_avg[15],
+                            arb.delta_avg[18],
+                            arb.delta_avg[21]
+                            )
+                data.append(data_row)
+
+            self.logger.add('Data upload', 'Process data into rows', 'Success', 'Data processed')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Process data into rows', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        # -----/
+
+        # ----- Upload data
+        try:
+            rt_columns = list(self.tables_info.result_table().keys())
+            connection.insert_to_table(table_name, rt_columns, data)
+            self.logger.add('Data upload', f'Upload data to result_table table', 'Success',
+                            f'{len(data)} rows uploaded')
+        except PsycopgError as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to result_table table', 'Error', error_message)
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to result_table table', 'Error', error_message)
+        # -----/
+
+
+        dicInfo = connection.get_table_info(table_name)
+        connection.add_to_action_log(table_name, 'data_calculations', dicInfo['total_rows'], 'Calculated')
         connection.close_connection()
