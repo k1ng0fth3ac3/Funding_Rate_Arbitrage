@@ -86,12 +86,27 @@ class Arbitrage:
         self.exchange_1: str = exchange_1_data['exchange_id']
         self.exchange_1_data = exchange_1_data
 
+        self.delta_avg = {}
+
         if exchange_2_data is None:
             self.exchange_2: str = 'SPOT'
             self.exchange_2_data = None
+
+            for i in range(3,24,3):
+                if exchange_1_data[f'avg_cycle_{i}'] is not None:
+                    self.delta_avg[i] = abs(exchange_1_data[f'avg_cycle_{i}'])
+                else:
+                    self.delta_avg[i] = None
         else:
             self.exchange_2: str = exchange_2_data['exchange_id']
             self.exchange_2_data = exchange_2_data
+
+            for i in range(3,24,3):
+                if exchange_1_data[f'avg_cycle_{i}'] is not None and exchange_2_data[f'avg_cycle_{i}'] is not None:
+                    self.delta_avg[i] = abs(exchange_1_data[f'avg_cycle_{i}']) + abs(exchange_2_data[f'avg_cycle_{i}'])
+                else:
+                    self.delta_avg[i] = None
+
 
         self.delta_averages = {}
         self.apr_averages = {}
