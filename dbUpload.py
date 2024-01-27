@@ -26,7 +26,12 @@ class Upload:
         self.logger.add('Data upload', 'Initialize', 'Success', 'Created Tables_info and gecko objects')
 
         self.active_pairs(exchange_count, min_fr,min_vol,min_oi)
-        #self.funding_rates_2h()
+        self.funding_rates_2h()
+
+
+        if self.get_funding_cycle(refTime=self.timeNow,is2hourCycle=True) in (4, 8, 12):
+            self.convert_2h_to_8h_data()
+            self.calc_table()
 
 
     def active_pairs(self,exchange_count: int = 50, min_fr: float = 0.015, min_vol: float = 15000, min_oi: float = 15000):
@@ -337,7 +342,62 @@ class Upload:
 
 
     def convert_2h_to_8h_data(self):
-        pass
+        table_name = 'funding_rates'
+        connection = Connection()
+        connection.clear_whole_table(table_name)
+
+        to_columns = 'utc_date, utc_time, funding_cycle, exchange_id, symbol, base, target, funding_rate, open_interest, volume, spread'
+        from_table = f"""funding_rates_2h"""
+        columns = f"""
+                    (TO_CHAR(utc_date - INTERVAL '4 HOURS' + INTERVAL '1 DAY', 'YYYY-MM-DD')::date) AS utc_date,
+                    MAX(utc_time) AS utc_time,
+                    CASE
+                        WHEN (funding_cycle BETWEEN 1 AND 4) OR (funding_cycle = 12) THEN 1
+                        WHEN funding_cycle BETWEEN 5 AND 8 THEN 2
+                        WHEN funding_cycle BETWEEN 9 AND 12 THEN 3
+                    END AS funding_cycle,
+                    exchange_id,
+                    symbol,
+                    base,
+                    target,
+                    AVG(funding_rate) AS funding_rate,
+                    AVG(open_interest) AS open_interest,
+                    AVG(volume) AS volume,
+                    AVG(spread) AS spread
+                    """
+        group_by = f"""
+                    TO_CHAR(utc_date - INTERVAL '4 HOURS' + INTERVAL '1 DAY', 'YYYY-MM-DD'),	-- Shift backwards 4 hours as thats when the cycle starts
+                    funding_cycle,
+                    exchange_id,
+                    symbol,
+                    base,
+                    target
+                    """
+
+        try:
+            dicInfo = connection.get_table_info(table_name)
+            existing_rows = dicInfo['total_rows']
+
+            connection.insert_to_table_with_sql(table_name, to_columns=to_columns, from_table_name=from_table,
+                                                columns=columns, group_by=group_by)
+
+            dicInfo = connection.get_table_info(table_name)
+            rowC = dicInfo['total_rows']
+
+            self.logger.add('Data upload', f'Convert 2h data to 8h data', 'Success',
+                            f'{rowC} added to the funding_rates table')
+
+            connection.clear_whole_table(table_name='funding_rates_2h')
+
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Convert 2h data to 8h data', 'Error',
+                            f'{error_message}')
+
+
+        dicInfo = connection.get_table_info(table_name)
+        connection.add_to_action_log(table_name, 'Data conversion', dicInfo['total_rows'] - existing_rows, 'Converted')
+        connection.close_connection()
 
 
 
