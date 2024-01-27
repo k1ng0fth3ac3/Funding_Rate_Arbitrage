@@ -76,6 +76,14 @@ class Create_table:
         self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
 
+    def result_table(self, delete_existing: bool = False):
+        table_name = 'result_table'
+
+        dicCols = self.table_info.result_table()
+
+        self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
+        self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
+
 
 class Tables_info:
 
@@ -190,14 +198,14 @@ class Tables_info:
     def result_table(self):
         dicCols = {}
         dicCols['id'] = 'SERIAL PRIMARY KEY'
+        dicCols['delta'] = 'DECIMAL(8,6)'
+        dicCols['apr'] = 'DECIMAL(10,3)'
+
         dicCols['base'] = 'VARCHAR(20)'
         dicCols['exchange_id_1'] = 'VARCHAR(30)'
         dicCols['funding_rate_1'] = 'DECIMAL(8,6)'
         dicCols['exchange_id_2'] = 'VARCHAR(30)'
         dicCols['funding_rate_2'] = 'DECIMAL(8,6)'
-
-        dicCols['delta'] = 'DECIMAL(8,6)'
-        dicCols['apr'] = 'DECIMAL(10,3)'
 
         dicCols['target_1'] = 'VARCHAR(10)'
         dicCols['target_2'] = 'VARCHAR(10)'
