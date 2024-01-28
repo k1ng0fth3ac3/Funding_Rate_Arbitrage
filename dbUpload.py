@@ -463,8 +463,8 @@ class Upload:
                 SELECT	exchange_id,
                         symbol
                   FROM	funding_rates
-                 WHERE	utc_date = (SELECT utc_date FROM action_log WHERE table_name = 'funding_rates' ORDER BY	id DESC LIMIT 1)
-                   AND	utc_time = (SELECT utc_time FROM action_log WHERE table_name = 'funding_rates' ORDER BY	id DESC LIMIT 1)
+                 WHERE	utc_date = (SELECT utc_date FROM funding_rates ORDER BY utc_date DESC LIMIT 1)
+	               AND	utc_time = (SELECT utc_time FROM funding_rates ORDER BY utc_date DESC, utc_time DESC LIMIT 1)
                    AND	volume > 15000
                    AND	open_interest > 15000
                    AND	ABS(funding_rate) > 0.01
