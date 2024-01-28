@@ -332,7 +332,7 @@ class Upload:
 
     def get_funding_cycle(self, refTime, is2hourCycle: bool = True):
 
-        # 2-hour Cycle: 1 = 20:00-22:00, 2 = 22:00-24:00, 3 = 00:00-02:00, 02:00-04:00, etc. etc.
+        # 2-hour Cycle: 1 = 20:00-22:00, 2 = 22:00-24:00, 3 = 00:00-02:00, 4 = 02:00-04:00, etc. etc.
         # 8-hour Cycle: 1 = 20:00-04:00, 2 = 04:00-12:00, 3 = 12:00-20:00
 
         if is2hourCycle:    # 2 Hour cycle
@@ -475,7 +475,7 @@ class Upload:
                     ON	act_cycle.exchange_id = all_cycles.exchange_id AND act_cycle.symbol = all_cycles.symbol
                 ------/ CYCLE COUNT + RANK
                      
-                     )
+                     ) AS cycle_counts
               GROUP BY	exchange_id,
                         symbol,
                         funding_rate,
@@ -489,7 +489,7 @@ class Upload:
                         base,
                         target
                 ------/	CALC AVERAGES
-                      )
+                      ) AS calc_averages
                     """
         columns = f"""
                     *
