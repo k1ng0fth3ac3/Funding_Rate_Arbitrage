@@ -30,7 +30,7 @@ class Upload:
         self.funding_rates_2h()
 
 
-        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True) in (5, 9, 1):
+        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True) in (4, 8, 12):
             self.convert_2h_to_8h_data()
             self.calc_table()
             self.result_table()
@@ -333,7 +333,7 @@ class Upload:
 
     def get_funding_cycle(self, refTime, is2hourCycle: bool = True):
 
-        # 2-hour Cycle: 1 = 20:00-22:00, 2 = 22:00-24:00, 3 = 00:00-02:00, 4 = 02:00-04:00, etc. etc.
+        # 2-hour Cycle: 1 = 20:00-22:00, 2 = 22:00-24:00, 3 = 00:00-02:00, 4 = 02:00-04:00, 5 = 04:00-06:00, etc.
         # 8-hour Cycle: 1 = 20:00-04:00, 2 = 04:00-12:00, 3 = 12:00-20:00
 
         if is2hourCycle:    # 2 Hour cycle
@@ -347,18 +347,31 @@ class Upload:
     def convert_2h_to_8h_data(self):
         table_name = 'funding_rates'
         connection = Connection()
-        connection.clear_whole_table(table_name)
 
         to_columns = 'utc_date, utc_time, funding_cycle, exchange_id, symbol, base, target, funding_rate, open_interest, volume, spread'
-        from_table = f"""funding_rates_2h"""
+        from_table = f"""
+                    (SELECT  utc_date,
+                            utc_time,
+                            CASE
+                                WHEN (funding_cycle BETWEEN 1 AND 4) OR (funding_cycle = 12) THEN 1
+                                WHEN funding_cycle BETWEEN 5 AND 8 THEN 2
+                                WHEN funding_cycle BETWEEN 9 AND 12 THEN 3
+                            END AS funding_cycle,
+                            exchange_id,
+                            symbol,
+                            base,
+                            target,
+                            funding_rate,
+                            open_interest,
+                            volume,
+                            spread
+                    FROM    funding_rates_2h
+                            ) subquery
+                    """
         columns = f"""
-                    (TO_CHAR(utc_date - INTERVAL '4 HOURS' + INTERVAL '1 DAY', 'YYYY-MM-DD')::date) AS utc_date,
+                    TO_CHAR(utc_date - INTERVAL '4 HOURS' + INTERVAL '1 DAY', 'YYYY-MM-DD') AS utc_date,
                     MAX(utc_time) AS utc_time,
-                    CASE
-                        WHEN (funding_cycle BETWEEN 1 AND 4) OR (funding_cycle = 12) THEN 1
-                        WHEN funding_cycle BETWEEN 5 AND 8 THEN 2
-                        WHEN funding_cycle BETWEEN 9 AND 12 THEN 3
-                    END AS funding_cycle,
+                    funding_cycle,
                     exchange_id,
                     symbol,
                     base,
