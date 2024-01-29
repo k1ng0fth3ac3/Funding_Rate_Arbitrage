@@ -160,6 +160,13 @@ class Analyze:
             # -------------------- FR STABILITY
             # Get funding_rate data and iterate through it (max 30 days) and get stability score
             # Need to ipmort Numpy (and don't forget to install it on the Linux server as well)
+
+            where_clause = """
+                            exchange_id = %s
+                        AND  
+                            """
+            fr_data = connection.select_table_data(table_name='funding_rates',columns='funding_rate',
+                                                   where_clause=where_clause,params=())
             # --------------------/
 
 class Arbitrage:
