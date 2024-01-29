@@ -36,7 +36,8 @@ class Upload:
             self.result_table()
 
 
-    def active_pairs(self,exchange_count: int = 50, min_fr: float = 0.015, min_vol: float = 15000, min_oi: float = 15000):
+    def active_pairs(self,exchange_count: int = 50, min_fr: float = 0.015,
+                     min_vol: float = 15000, min_oi: float = 15000, max_spread: float = 0.02):
 
         # ----- Connect to Database
         table_name = 'active_pairs'
@@ -73,7 +74,7 @@ class Upload:
         # ----- Get new pairs that meet our criteria
         for ep in self.gecko.exchange_pairs.values():
             exchange_symbol = f'{ep.exchange_id}_{ep.symbol}'
-            if abs(ep.funding_rate) >= min_fr and ep.volume_usd >= min_vol and ep.open_interest >= min_oi:
+            if abs(ep.funding_rate) >= min_fr and ep.volume_usd >= min_vol and ep.open_interest >= min_oi and ep.spread <= max_spread:
                 if not exchange_symbol in self.dicActivePairs:
                     self.dicActivePairs[exchange_symbol] = 1
                     dicToActivePairs[exchange_symbol] = ep
@@ -323,7 +324,7 @@ class Upload:
             self.logger.add('Data upload', f'Upload data to update_log table', 'Error', error_message)
             self.logger.exit_code_run_due_to_error(error_message)
 
-        connection.add_to_action_log('update_log',self.action,len(data),'-',customTime=self.timeNow)
+        #connection.add_to_action_log('update_log',self.action,len(data),'-',customTime=self.timeNow)
         # -----/
 
         connection.close_connection()
