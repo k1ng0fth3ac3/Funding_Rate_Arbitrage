@@ -369,7 +369,7 @@ class Upload:
                             ) subquery
                     """
         columns = f"""
-                    TO_CHAR(utc_date - INTERVAL '4 HOURS' + INTERVAL '1 DAY', 'YYYY-MM-DD') AS utc_date,
+                    (TO_CHAR(utc_date - INTERVAL '4 HOURS' + INTERVAL '1 DAY', 'YYYY-MM-DD')::date) AS utc_date,
                     MAX(utc_time) AS utc_time,
                     funding_cycle,
                     exchange_id,
