@@ -30,7 +30,7 @@ class Upload:
         self.funding_rates_2h()
 
 
-        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True) in (4, 8, 12):
+        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True) in (5, 9, 1):
             self.convert_2h_to_8h_data()
             self.calc_table()
             self.result_table()
