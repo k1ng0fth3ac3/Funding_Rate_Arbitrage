@@ -17,6 +17,9 @@ class Analyze:
         self.min_avg_6 = min_avg_6
         self.min_avg_9 = min_avg_9
 
+
+        self.ranked = {}            # Key: ID from result_table, Value: Dictionary
+
     def get_data(self):
         connection = Connection(remote_server=False)
         data = connection.select_table_data(table_name='calc_table',columns='*')
@@ -73,6 +76,91 @@ class Analyze:
             if len(self.arbitrage) > 0:
                 self.arbitrage = sorted(self.arbitrage, key=lambda arb: arb.delta, reverse=True)
 
+
+    def rank(self):
+        # Volume of both exchanges above 500K = full points (for both exchanges)
+        # OI of both exchanges above 500K = full points (fot both exchanges)
+        # Compare spread to delta and give points based on how many cycles does it take to break even on that loss.
+        # Max act_delta capped at 2 = full points, otherwise take the highest act_delta and that's full points.
+
+        # Invent a way to get the price data through APIs, perhaps Gecko...or then need to get it through multiple exchanges
+
+        # ----- SETTINGS
+        vol_weight = 0.075
+        oi_weight = 0.075
+        spread_weight = 0.15
+        act_fr = 0.3
+        stability_fr = 0.3
+        price_stability = 0.1
+        # -----/
+
+
+        connection = Connection(remote_server=False)
+        data = connection.select_table_data(table_name='result_table', columns='*')
+
+        columns = list(self.tables_info.result_table().keys())
+        df = pd.DataFrame(data, columns=columns)
+
+
+        for index, row in df.iterrows():
+            ID = row['id']
+            self.ranked[ID] = {}
+            self.ranked[ID]['score'] = 0
+
+            vol_score = 0
+            oi_score = 0
+            spread_score = 0
+            act_fr_score = 0
+            stability_fr_score = 0
+            price_score = 0
+
+
+            ex_2 = row['exchange_id_2']
+
+            volume_1 = row['volume_1']
+            oi_1 = row['open_interest_1']
+            spread_1 = row['spread_1']
+            volume_2 = row['volume_2']
+            oi_2 = row['open_interest_2']
+            spread_2 = row['spread_2']
+
+            delta = row['delta']
+            fr_1 = row['funding_rate_1']
+            fr_2 = row['funding_rate_2']
+
+            # -------------------- VOLUME
+            vol_score = 5 if volume_1 >= 500000 else (volume_1 / 500000) * 5
+            if ex_2 == 'SPOT':
+                vol_score *= 2
+            else:
+                vol_score += 5 if volume_2 >= 500000 else (volume_2 / 500000) * 5
+            # --------------------/
+            # -------------------- OI
+            oi_score = 5 if oi_1 >= 500000 else (oi_1 / 500000) * 5
+            if ex_2 == 'SPOT':
+                oi_score *= 2
+            else:
+                oi_score += 5 if oi_2 >= 500000 else (oi_2 / 500000) * 5
+            # --------------------/
+            # -------------------- SPREAD
+            # How many cycles does it take break even against lost funds on spread?
+            if ex_2 == 'SPOT':
+                total_spread = (spread_1 * 100) / abs(fr_1)
+            else:
+                total_spread = (spread_1 * 100) / abs(fr_1) + (spread_2 * 100) / abs(fr_2)
+
+            delta_to_spread = total_spread / delta
+            spread_score = 10 - delta_to_spread     # Score can be severely negative
+            # --------------------/
+
+            # -------------------- ACT FR
+            act_fr_score = delta * 10 if delta <= 1 else 10
+            # --------------------/
+
+            # -------------------- FR STABILITY
+            # Get funding_rate data and iterate through it (max 30 days) and get stability score
+            # Need to ipmort Numpy (and don't forget to install it on the Linux server as well)
+            # --------------------/
 
 class Arbitrage:
 
