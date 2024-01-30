@@ -87,10 +87,13 @@ class Upload:
             data = []  # Reset
             for ex_pair, ep in dicToActivePairs.items():
                 data_row = ()
+
+                base = ep.base.replace("-PERP","")
+
                 data_row = (f'{self.dateNow}',
                             f'{self.dateNow}',
                             f'{ep.exchange_id}',
-                            f'{ep.base}',
+                            f'{base}',
                             f'{ex_pair}'
                             )
                 data.append(data_row)
@@ -212,6 +215,7 @@ class Upload:
             dicExchanges = {}           # Key: exchange_id, Value: dic with currency- and pairs counts
             data = []
             for ep in self.gecko.exchange_pairs.values():
+                base = ep.base.replace("-PERP", "")
 
                 # ----- Either our FR + Vol meets criteria this Cycle, or it met criteria in the past (is in active_pairs)
                 exchange_symbol = f'{ep.exchange_id}_{ep.symbol}'
@@ -226,13 +230,12 @@ class Upload:
                         ul_data_row = ()
                         currencies = []  # Currency list for the active exchange
 
-                    if ep.base not in currencies:
+                    if base not in currencies:
                         dicExchanges[ep.exchange_id]['currencies_count'] +=1            # Currencies count
-                        currencies.append(ep.base)
+                        currencies.append(base)
                     dicExchanges[ep.exchange_id]['pairs_count'] +=1                     # Pairs count
                     dicExchanges[ep.exchange_id]['volume'] += ep.volume_usd             # Volume
                     # -----/
-
 
                     # ----- Funding Rate data
                     data_row = ()
@@ -241,7 +244,7 @@ class Upload:
                                    fundingCycle,
                                 f'{ep.exchange_id}',
                                 f'{ep.symbol}',
-                                f'{ep.base}',
+                                f'{base}',
                                 f'{ep.target}',
                                 ep.funding_rate,
                                 ep.open_interest,
