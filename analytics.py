@@ -166,6 +166,7 @@ class Analyze:
             spread_score = 10 - delta_to_spread     # Score can be severely negative
             # --------------------/
 
+
             # -------------------- ACT FR
             act_fr_score = delta * 20 if delta <= 0.5 else 10
             # --------------------/
