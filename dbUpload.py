@@ -29,11 +29,18 @@ class Upload:
         self.active_pairs(exchange_count, min_fr,min_vol,min_oi)
         self.funding_rates_2h()
 
+        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(), is2hourCycle=True) == 1:
+            self.price_history()
+
 
         if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(),is2hourCycle=True) in (4, 8, 12):
             self.convert_2h_to_8h_data()
             self.calc_table()
             self.result_table()
+
+
+
+
 
 
     def active_pairs(self,exchange_count: int = 50, min_fr: float = 0.015,
@@ -99,7 +106,7 @@ class Upload:
                 data.append(data_row)
 
             self.logger.add('Data upload', f'Active pairs data processing into rows', 'Success',
-                            f'All data converted into rows')
+                            f'{len(data)} data converted into rows')
 
         except Exception as e:
             error_message = str(e)[-255:]
@@ -140,13 +147,109 @@ class Upload:
 
         # ---------------------------------------- DELETE pairs that have not been above our threshold for over a week
         try:
+
+            prev_count = connection.get_table_info(table_name=table_name)['total_rows']
             connection.delete_records(table_name=table_name,
                                   where_clause_sql="utc_last_active < NOW() - INTERVAL '%s days'",params=(7,))
+            delete_count = prev_count - connection.get_table_info(table_name=table_name)['total_rows']
 
-            self.logger.add('Data upload', f'Delete old pairs from active_pairs', 'Success', 'Deleted')
+            self.logger.add('Data upload', f'Delete old pairs from active_pairs',
+                            'Success', f'Deleted {delete_count} items')
         except Exception as e:
             error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Delete old pairs from active_pairs', 'Error', error_message)
+        # ----------------------------------------/
+
+
+        connection.close_connection()
+
+
+    def price_history(self):
+
+        # ----- Connect to Database
+        table_name = 'price_history'
+
+        try:
+            connection = Connection(remote_server=self.remote_server)
+            self.logger.add('Data upload', 'Establishing connection to database', 'Success', 'Connected')
+        except PsycopgError as e:
+            # Specific database-related error
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        except Exception as e:
+            # Other unexpected exceptions
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        # -----/
+
+        try:
+            data = []
+            dicAlreadyDone = []  # Bases already appended
+            for ep in self.gecko.exchange_pairs.values():
+                base = ep.base.replace("-PERP", "")
+
+                exchange_symbol = f'{ep.exchange_id}_{ep.symbol}'
+                if exchange_symbol in self.dicActivePairs and base not in dicAlreadyDone:
+                    dicAlreadyDone.append(base)
+
+                    # ----- Price data
+                    data_row = ()
+                    data_row = (f'{self.dateNow}',
+                                f'{base}',
+                                ep.price,
+                                ep.price_change_24h
+                                )
+                    data.append(data_row)
+                    # -----/
+
+            self.logger.add('Data upload', f'Price Data processing into rows', 'Success',
+                            f'{len(data)} data sets converted into rows')
+
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Price Data processing into rows', 'Error',
+                            f'{error_message}')
+
+
+        try:
+            columns = list(self.tables_info.price_history().keys())
+            connection.insert_to_table(table_name,columns=columns,data=data)
+
+            self.logger.add('Data upload', f'Upload data to {table_name} table', 'Success',
+                            f'{len(data)} rows uploaded')
+        except PsycopgError as e:
+            # Specific database-related error
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to {table_name} table', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        except Exception as e:
+            # Other unexpected exceptions
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to {table_name} table', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+
+        connection.add_to_action_log(table_name,self.action,len(data),
+                                     f'Fetched from {len(self.dicActivePairs)} active pairs',customTime=self.timeNow)
+
+
+        # ---------------------------------------- DELETE old prices and non-active base tokens
+        try:
+
+            prev_count = connection.get_table_info(table_name=table_name)['total_rows']
+
+            where_clause = "base NOT IN (SELECT	base FROM active_pairs) OR	utc_date < current_date - interval '%s days'"
+            connection.delete_records(table_name=table_name,
+                                      where_clause_sql=where_clause, params=(14,))
+
+            delete_count = prev_count - connection.get_table_info(table_name=table_name)['total_rows']
+
+            self.logger.add('Data upload', f'Delete over 14 days old data and non-active pairs',
+                            'Success', f'Deleted {delete_count} items')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Delete over 14 days old data and non-active pairs', 'Error', error_message)
         # ----------------------------------------/
 
 
@@ -255,7 +358,7 @@ class Upload:
                     # -----/
 
             self.logger.add('Data upload', f'Object Funding Rate Data processing into rows', 'Success',
-                            f'All data converted into rows')
+                            f'{len(data)} data converted into rows')
         except Exception as e:
             error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Object Funding Rate Data processing into rows', 'Error',
@@ -304,7 +407,7 @@ class Upload:
 
 
             self.logger.add('Data upload', f'Object Log Data processing into rows', 'Success',
-                            f'All data converted into rows')
+                            f'{len(data)} data converted into rows')
         except Exception as e:
             error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Object Log Data processing into rows', 'Error',
@@ -417,7 +520,6 @@ class Upload:
         dicInfo = connection.get_table_info(table_name)
         connection.add_to_action_log(table_name, 'Data conversion', dicInfo['total_rows'] - existing_rows, 'Converted')
         connection.close_connection()
-
 
 
     def calc_table(self):
@@ -602,7 +704,8 @@ class Upload:
                             )
                 data.append(data_row)
 
-            self.logger.add('Data upload', 'Process data into rows', 'Success', 'Data processed')
+            self.logger.add('Data upload', 'Process data into rows', 'Success',
+                            f'{len(data)} data sets processed')
         except Exception as e:
             error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Process data into rows', 'Error', error_message)
@@ -612,6 +715,8 @@ class Upload:
         # ----- Upload data
         try:
             rt_columns = list(self.tables_info.result_table().keys())
+
+            connection.clear_whole_table(table_name)    # Delete previous data
             connection.insert_to_table(table_name, rt_columns, data)
             self.logger.add('Data upload', f'Upload data to result_table table', 'Success',
                             f'{len(data)} rows uploaded')
