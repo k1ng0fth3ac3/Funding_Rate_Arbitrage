@@ -92,6 +92,14 @@ class Create_table:
         self.connection.create_table(table_name=table_name, dicCols=dicCols, delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
 
+    def ranked_results(self, delete_existing: bool = False):
+        table_name = 'ranked_results'
+
+        dicCols = self.table_info.ranked_results()
+
+        self.connection.create_table(table_name=table_name, dicCols=dicCols, delete_existing=delete_existing)
+        self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
+
 
 class Tables_info:
 
@@ -214,7 +222,6 @@ class Tables_info:
         dicCols['funding_rate_1'] = 'DECIMAL(8,6)'
         dicCols['exchange_id_2'] = 'VARCHAR(30)'
         dicCols['funding_rate_2'] = 'DECIMAL(8,6)'
-
         dicCols['target_1'] = 'VARCHAR(10)'
         dicCols['target_2'] = 'VARCHAR(10)'
 
@@ -248,4 +255,47 @@ class Tables_info:
 
         return dicCols
 
+    def ranked_results(self):
+        dicCols = {}
+        dicCols['id'] = 'SERIAL PRIMARY KEY'
+
+        dicCols['rank'] = 'INT'
+        dicCols['weighted_total_scr'] = 'DECIMAL(6,3)'
+        dicCols['total_scr'] = 'DECIMAL(5,4)'
+        dicCols['vol_scr'] = 'DECIMAL(5,4)'
+        dicCols['oi_scr'] = 'DECIMAL(5,4)'
+        dicCols['spread_scr'] = 'DECIMAL(5,4)'
+        dicCols['fr_scr'] = 'DECIMAL(5,4)'
+        dicCols['fr_stability_scr'] = 'DECIMAL(5,4)'
+        dicCols['price_stability_scr'] = 'DECIMAL(5,4)'
+
+        dicCols['delta'] = 'DECIMAL(8,6)'
+        dicCols['apr'] = 'DECIMAL(10,3)'
+
+        dicCols['base'] = 'VARCHAR(20)'
+        dicCols['exchange_id_1'] = 'VARCHAR(30)'
+        dicCols['funding_rate_1'] = 'DECIMAL(8,6)'
+        dicCols['exchange_id_2'] = 'VARCHAR(30)'
+        dicCols['funding_rate_2'] = 'DECIMAL(8,6)'
+        dicCols['target_1'] = 'VARCHAR(10)'
+        dicCols['target_2'] = 'VARCHAR(10)'
+
+        dicCols['volume_1'] = 'DECIMAL(16,0)'
+        dicCols['volume_2'] = 'DECIMAL(16,0)'
+
+        dicCols['spread_1'] = 'DECIMAL(10,9)'
+        dicCols['spread_2'] = 'DECIMAL(10,9)'
+
+        dicCols['open_interest_1'] = 'DECIMAL(16,0)'
+        dicCols['open_interest_2'] = 'DECIMAL(16,0)'
+
+        dicCols['avg_delta_3'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_6'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_9'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_12'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_15'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_18'] = 'DECIMAL(8,6)'
+        dicCols['avg_delta_21'] = 'DECIMAL(8,6)'
+
+        return dicCols
 
