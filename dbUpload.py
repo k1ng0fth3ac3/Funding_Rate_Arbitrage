@@ -29,7 +29,7 @@ class Upload:
         self.active_pairs(exchange_count, min_fr,min_vol,min_oi)
         self.funding_rates_2h()
 
-        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(), is2hourCycle=True) == 1:
+        if self.get_funding_cycle(refTime=datetime.now(timezone.utc).time(), is2hourCycle=True) == 10:
             self.price_history()
 
 
@@ -37,8 +37,7 @@ class Upload:
             self.convert_2h_to_8h_data()
             self.calc_table()
             self.result_table()
-
-
+            self.ranked_results()
 
 
 
@@ -726,6 +725,112 @@ class Upload:
         except Exception as e:
             error_message = str(e)[-255:]
             self.logger.add('Data upload', f'Upload data to result_table table', 'Error', error_message)
+        # -----/
+
+
+        dicInfo = connection.get_table_info(table_name)
+        connection.add_to_action_log(table_name, 'data_calculations', dicInfo['total_rows'], 'Calculated')
+        connection.close_connection()
+
+
+    def ranked_results(self):
+
+        # ----- Connect to Database
+        table_name = 'ranked_results'
+
+        try:
+            connection = Connection(remote_server=self.remote_server)
+            self.logger.add('Data upload', 'Establishing connection to database', 'Success', 'Connected')
+        except PsycopgError as e:
+            # Specific database-related error
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        except Exception as e:
+            # Other unexpected exceptions
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', 'Establishing connection to database', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        # -----/
+
+
+        # ----- Analyze the data
+        try:
+            analyze = Analyze()
+            analyze.rank()
+
+            self.logger.add('Data upload', 'Run scoring algorithm', 'Success', 'Data scored and ranked')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Run scoring algorithm', 'Error', error_message)
+        # -----/
+
+        # -----  Process data
+        try:
+            data = []
+            for arb in analyze.ranked.values():
+                data_row = ()
+                data_row = (arb["rank"],
+                            arb["total_score_weighted"],
+                            arb["total_score"],
+                            arb["vol_score"],
+                            arb["oi_score"],
+                            arb["spread_score"],
+                            arb["act_fr_score"],
+                            arb["stability_fr_score"],
+                            arb["stability_price_score"],
+
+                            arb["data"]["delta"],
+                            arb["data"]["apr"],
+
+                            f'{arb["data"]["base"]}',
+                            f'{arb["data"]["exchange_id_1"]}',
+                            arb["data"]["funding_rate_1"],
+                            f'{arb["data"]["exchange_id_2"]}',
+                            arb["data"]["funding_rate_2"] if arb["data"]["funding_rate_2"] is not None else None,
+
+                            arb["data"]["target_1"],
+                            arb["data"]["target_2"] if arb["data"]["target_2"] is not None else None,
+                            arb["data"]["volume_1"],
+                            arb["data"]["volume_2"] if arb["data"]["volume_2"] is not None else None,
+                            arb["data"]["spread_1"],
+                            arb["data"]["spread_2"] if arb["data"]["spread_2"] is not None else None,
+                            arb["data"]["open_interest_1"],
+                            arb["data"]["open_interest_2"] if arb["data"]["open_interest_2"] is not None else None,
+
+
+                            arb["data"]["avg_delta_3"],
+                            arb["data"]["avg_delta_6"],
+                            arb["data"]["avg_delta_9"],
+                            arb["data"]["avg_delta_12"],
+                            arb["data"]["avg_delta_15"],
+                            arb["data"]["avg_delta_18"],
+                            arb["data"]["avg_delta_21"]
+                            )
+                data.append(data_row)
+
+            self.logger.add('Data upload', 'Process data into rows', 'Success',
+                            f'{len(data)} data sets processed')
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Process data into rows', 'Error', error_message)
+            self.logger.exit_code_run_due_to_error(error_message)
+        # -----/
+
+        # ----- Upload data
+        try:
+            columns = list(self.tables_info.ranked_results().keys())
+
+            connection.clear_whole_table(table_name)    # Delete previous data
+            connection.insert_to_table(table_name, columns, data)
+            self.logger.add('Data upload', f'Upload data to ranked_results table', 'Success',
+                            f'{len(data)} rows uploaded')
+        except PsycopgError as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to ranked_results table', 'Error', error_message)
+        except Exception as e:
+            error_message = str(e)[-255:]
+            self.logger.add('Data upload', f'Upload data to ranked_results table', 'Error', error_message)
         # -----/
 
 
