@@ -231,12 +231,14 @@ class Analyze:
         sorted_ranked = sorted(self.ranked.items(), key=lambda x: x[1]['total_score_weighted'], reverse=True)
 
         self.ranked = {}    # Reset
+        rank = 0    # Reset
         for i, (k, v) in enumerate(sorted_ranked):
 
             if not (v['vol_score'] < 0.15 or v['oi_score'] < 0.15 or v['spread_score'] < 0.15
                     or v['act_fr_score'] < 0.15 or v['stability_fr_score'] < 0.15):
+                rank +=1
                 self.ranked[k] = v
-                self.ranked[k]['rank'] = i + 1
+                self.ranked[k]['rank'] = rank
         # -----/
 
     def get_delta_history(self,connection,ex_1, ex_2, base, target_1, target_2):
