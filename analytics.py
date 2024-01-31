@@ -86,7 +86,9 @@ class Analyze:
         # Invent a way to get the price data through APIs, perhaps Gecko...or then need to get it through multiple exchanges
 
 
-        stability_threshold = 0.25      # If the price moves from cycle to the next more than this, it's out of bounds
+        stability_threshold = 0.25          # If the FR moves from cycle to the next more than this, it's out of bounds
+        price_stability_threshold = 5       # 5% (how often we move less than 5% in 24h)
+
 
         # ----- WEIGHTS
         vol_weight = 0.075
@@ -116,14 +118,14 @@ class Analyze:
             self.ranked[ID]['spread_score'] = 0
             self.ranked[ID]['act_fr_score'] = 0
             self.ranked[ID]['stability_fr_score'] = 0
-
+            self.ranked[ID]['stability_price_score'] = 0
 
             vol_score = 0
             oi_score = 0
             spread_score = 0
             act_fr_score = 0
             stability_fr_score = 0
-            price_score = 0
+            stability_price_score = 0
 
             ex_1 = row['exchange_id_1']
             ex_2 = row['exchange_id_2']
@@ -174,12 +176,24 @@ class Analyze:
 
             delta_history = self.get_delta_history(connection,ex_1,ex_2,row['base'],row['target_1'],row['target_2'])
             if len(delta_history) > 1:
-                stability_rate = self.calculate_fr_delta_stability(delta_history=delta_history,stability_threshold=stability_threshold)
+                stability_rate = self.calculate_delta_stability(delta_history=delta_history,stability_threshold=stability_threshold)
             else:
                 stability_rate = 0
 
             stability_fr_score = stability_rate * 10
             # --------------------/
+
+            # -------------------- PRICE STABILITY
+            price_history = self.get_price_history(connection=connection,base=row['base'])
+            if len(delta_history) > 1:
+                stability_price_score = self.calculate_delta_stability(delta_history=price_history,stability_threshold=price_stability_threshold)
+            else:
+                stability_price_score = 0
+
+            stability_price_score = stability_rate * 10
+            # --------------------/
+
+
 
             # -------------------- FINAL SCORING
             # ----- WEIGHTED SCORES
@@ -188,7 +202,7 @@ class Analyze:
             spread_score_weighted = float(spread_score) * float(spread_weight)
             act_fr_score_weighted = float(act_fr_score) * float(act_fr_weight)
             stability_fr_score_weighted = float(stability_fr_score) * float(stability_fr_weight)
-            #price_score_weighted = 0
+            stability_price_score_weighted = float(stability_price_score) * float(price_stability_weight)
             # -----/
 
             # ----- SCORE PERCENT OF MAX
@@ -197,6 +211,7 @@ class Analyze:
             spread_score = float(spread_score) / 10
             act_fr_score = float(act_fr_score) / 10
             stability_fr_score = float(stability_fr_score) / 10
+            stability_price_score = float(stability_price_score) / 10
             # -----/
 
             self.ranked[ID]['vol_score'] = vol_score
@@ -204,10 +219,11 @@ class Analyze:
             self.ranked[ID]['spread_score'] = spread_score
             self.ranked[ID]['act_fr_score'] = act_fr_score
             self.ranked[ID]['stability_fr_score'] = stability_fr_score
+            self.ranked[ID]['stability_price_score'] = stability_price_score
             self.ranked[ID]['total_score_weighted'] = (vol_score_weighted + oi_score_weighted + spread_score_weighted
-                                              + act_fr_score_weighted + stability_fr_score_weighted)
+                                              + act_fr_score_weighted + stability_fr_score_weighted + stability_price_score_weighted)
             self.ranked[ID]['total_score'] = (vol_score + oi_score + spread_score
-                                                       + act_fr_score + stability_fr_score) / 5
+                                                       + act_fr_score + stability_fr_score + stability_price_score) / 6
             # --------------------/
 
 
@@ -268,13 +284,14 @@ class Analyze:
 
         return  [row[0] for row in fr_history if row[0] is not None]
 
-    def calculate_fr_delta_stability(self,delta_history, stability_threshold):
+
+    def calculate_delta_stability(self,delta_history, stability_threshold):
         roc_values = []     # Rate of Change
 
         # Calculate ROC for each consecutive pair of data points
         for i in range(1, len(delta_history)):
-            current_rate = delta_history[i]
-            previous_rate = delta_history[i - 1]
+            current_rate = abs(delta_history[i])
+            previous_rate = abs(delta_history[i - 1])
 
             if previous_rate != 0:
                 roc = (current_rate - previous_rate) / previous_rate
@@ -285,9 +302,22 @@ class Analyze:
             if abs(roc) < stability_threshold:
                 roc_score += 1
 
-        stability_rate = roc_score / len(roc_values)
+        if len(roc_values) > 0:
+            stability_rate = roc_score / len(roc_values)
+        else:
+            stability_rate = 0
 
         return stability_rate
+
+
+    def get_price_history(self,connection, base):
+
+        price_history = connection.select_table_data(table_name='price_history', columns='price_change_24h',
+                                                  where_clause='base = %s',order_by='utc_date DESC', params=(base,))
+
+        return [row[0] for row in price_history if row[0] is not None]
+
+
 
 class Arbitrage:
 
