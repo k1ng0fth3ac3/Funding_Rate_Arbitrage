@@ -84,6 +84,14 @@ class Create_table:
         self.connection.create_table(table_name=table_name,dicCols=dicCols,delete_existing=delete_existing)
         self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
 
+    def price_history(self,delete_existing: bool = False):
+        table_name = 'price_history'
+
+        dicCols = self.table_info.price_history()
+
+        self.connection.create_table(table_name=table_name, dicCols=dicCols, delete_existing=delete_existing)
+        self.connection.add_to_action_log(table_name, self.action, 0, f'{len(dicCols)} columns')
+
 
 class Tables_info:
 
@@ -228,4 +236,16 @@ class Tables_info:
         dicCols['avg_delta_21'] = 'DECIMAL(8,6)'
 
         return dicCols
+
+
+    def price_history(self):
+        dicCols = {}
+        dicCols['id'] = 'SERIAL PRIMARY KEY'
+        dicCols['utc_date'] = 'DATE'
+        dicCols['base'] = 'VARCHAR(20)'
+        dicCols['price'] = 'DECIMAL(16,10)'
+        dicCols['price_change_24h'] = 'DECIMAL(8,3)'
+
+        return dicCols
+
 
