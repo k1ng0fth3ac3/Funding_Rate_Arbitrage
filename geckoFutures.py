@@ -94,3 +94,5 @@ class Exchange_pair:
         self.open_interest: float = round(ticker['open_interest_usd'],0)
         self.volume_usd: float = round(float(ticker['converted_volume']['usd']),0)
         self.spread: float = ticker['bid_ask_spread']
+        self.price_change_24h = ticker['h24_percentage_change']
+        self.price = ticker['index']
