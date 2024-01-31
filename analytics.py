@@ -85,13 +85,16 @@ class Analyze:
 
         # Invent a way to get the price data through APIs, perhaps Gecko...or then need to get it through multiple exchanges
 
-        # ----- SETTINGS
+
+        stability_threshold = 0.25      # If the price moves from cycle to the next more than this, it's out of bounds
+
+        # ----- WEIGHTS
         vol_weight = 0.075
         oi_weight = 0.075
         spread_weight = 0.15
-        act_fr = 0.3
-        stability_fr = 0.3
-        price_stability = 0.1
+        act_fr_weight = 0.3
+        stability_fr_weight = 0.3
+        price_stability_weight = 0.1
         # -----/
 
 
@@ -105,7 +108,15 @@ class Analyze:
         for index, row in df.iterrows():
             ID = row['id']
             self.ranked[ID] = {}
-            self.ranked[ID]['score'] = 0
+            self.ranked[ID]['data'] = row
+            self.ranked[ID]['total_score'] = 0
+            self.ranked[ID]['total_score_weighted'] = 0
+            self.ranked[ID]['vol_score'] = 0
+            self.ranked[ID]['oi_score'] = 0
+            self.ranked[ID]['spread_score'] = 0
+            self.ranked[ID]['act_fr_score'] = 0
+            self.ranked[ID]['stability_fr_score'] = 0
+
 
             vol_score = 0
             oi_score = 0
@@ -114,7 +125,7 @@ class Analyze:
             stability_fr_score = 0
             price_score = 0
 
-
+            ex_1 = row['exchange_id_1']
             ex_2 = row['exchange_id_2']
 
             volume_1 = row['volume_1']
@@ -154,20 +165,129 @@ class Analyze:
             # --------------------/
 
             # -------------------- ACT FR
-            act_fr_score = delta * 10 if delta <= 1 else 10
+            act_fr_score = delta * 20 if delta <= 0.5 else 10
             # --------------------/
 
             # -------------------- FR STABILITY
             # Get funding_rate data and iterate through it (max 30 days) and get stability score
-            # Need to ipmort Numpy (and don't forget to install it on the Linux server as well)
+            # Stability_rate = what is the rate that our fr changed less than our threshold
 
-            where_clause = """
-                            exchange_id = %s
-                        AND  
-                            """
-            fr_data = connection.select_table_data(table_name='funding_rates',columns='funding_rate',
-                                                   where_clause=where_clause,params=())
+            delta_history = self.get_delta_history(connection,ex_1,ex_2,row['base'],row['target_1'],row['target_2'])
+            if len(delta_history) > 1:
+                stability_rate = self.calculate_fr_delta_stability(delta_history=delta_history,stability_threshold=stability_threshold)
+            else:
+                stability_rate = 0
+
+            stability_fr_score = stability_rate * 10
             # --------------------/
+
+            # -------------------- FINAL SCORING
+            # ----- WEIGHTED SCORES
+            vol_score_weighted = float(vol_score) * float(vol_weight)
+            oi_score_weighted = float(oi_score) * float(oi_weight)
+            spread_score_weighted = float(spread_score) * float(spread_weight)
+            act_fr_score_weighted = float(act_fr_score) * float(act_fr_weight)
+            stability_fr_score_weighted = float(stability_fr_score) * float(stability_fr_weight)
+            #price_score_weighted = 0
+            # -----/
+
+            # ----- SCORE PERCENT OF MAX
+            vol_score = float(vol_score) / 10
+            oi_score = float(oi_score) / 10
+            spread_score = float(spread_score) / 10
+            act_fr_score = float(act_fr_score) / 10
+            stability_fr_score = float(stability_fr_score) / 10
+            # -----/
+
+            self.ranked[ID]['vol_score'] = vol_score
+            self.ranked[ID]['oi_score'] = oi_score
+            self.ranked[ID]['spread_score'] = spread_score
+            self.ranked[ID]['act_fr_score'] = act_fr_score
+            self.ranked[ID]['stability_fr_score'] = stability_fr_score
+            self.ranked[ID]['total_score_weighted'] = (vol_score_weighted + oi_score_weighted + spread_score_weighted
+                                              + act_fr_score_weighted + stability_fr_score_weighted)
+            self.ranked[ID]['total_score'] = (vol_score + oi_score + spread_score
+                                                       + act_fr_score + stability_fr_score) / 5
+            # --------------------/
+
+
+        # ----- RANK ITEMS
+        sorted_ranked = sorted(self.ranked.items(), key=lambda x: x[1]['total_score_weighted'], reverse=True)
+
+        self.ranked = {}    # Reset
+        for i, (k, v) in enumerate(sorted_ranked):
+
+            if not (v['vol_score'] < 0.15 or v['oi_score'] < 0.15 or v['spread_score'] < 0.15
+                    or v['act_fr_score'] < 0.15 or v['stability_fr_score'] < 0.15):
+                self.ranked[k] = v
+                self.ranked[k]['rank'] = i + 1
+        # -----/
+
+    def get_delta_history(self,connection,ex_1, ex_2, base, target_1, target_2):
+
+        columns = """
+                CASE WHEN exchange_1 = exchange_2 THEN
+                    ABS(fr_1) ELSE ABS(fr_1) + ABS(fr_2)
+                END AS delta
+                """
+        from_clause = """
+                    (
+                ------	EXCHANGE_1
+                SELECT	utc_date,
+                        funding_cycle,
+                        exchange_id as exchange_1,
+                        base as base_1,
+                        target as target_1,
+                        funding_rate AS fr_1
+                  FROM	funding_rates
+                 WHERE	exchange_id = %s
+                   AND	base = %s
+                   AND	target = %s
+                ORDER BY utc_date DESC, funding_cycle DESC
+                      )	AS ex_1
+                ------	/
+                  LEFT	OUTER JOIN
+                        (	
+                ------	EXCHANGE_2
+                SELECT	utc_date,
+                        funding_cycle,
+                        exchange_id as exchange_2,
+                        base as base_2,
+                        target as target_2,
+                        funding_rate AS fr_2
+                  FROM	funding_rates
+                 WHERE	exchange_id = %s
+                   AND	base = %s
+                   AND	target = %s
+                ------	/
+                        ) AS ex_2
+                    ON	ex_1.utc_date = ex_2.utc_date AND ex_1.funding_cycle = ex_2.funding_cycle
+                    """
+        fr_history = connection.select_table_data(table_name=from_clause, columns=columns,
+                                                  params=(ex_1,base,target_1,ex_2,base,target_2))
+
+        return  [row[0] for row in fr_history if row[0] is not None]
+
+    def calculate_fr_delta_stability(self,delta_history, stability_threshold):
+        roc_values = []     # Rate of Change
+
+        # Calculate ROC for each consecutive pair of data points
+        for i in range(1, len(delta_history)):
+            current_rate = delta_history[i]
+            previous_rate = delta_history[i - 1]
+
+            if previous_rate != 0:
+                roc = (current_rate - previous_rate) / previous_rate
+                roc_values.append(roc)
+
+        roc_score = 0   # Reset
+        for roc in roc_values:
+            if abs(roc) < stability_threshold:
+                roc_score += 1
+
+        stability_rate = roc_score / len(roc_values)
+
+        return stability_rate
 
 class Arbitrage:
 
